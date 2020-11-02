@@ -775,6 +775,8 @@ public class tiledbJNI {
 
   public static final native void tiledb_attribute_free(long jarg1);
 
+  public static final native int tiledb_attribute_set_nullable(long jarg1, long jarg2, short jarg3);
+
   public static final native int tiledb_attribute_set_filter_list(
       long jarg1, long jarg2, long jarg3);
 
@@ -946,11 +948,39 @@ public class tiledbJNI {
       ByteBuffer jarg6,
       long jarg7);
 
+  public static final native int tiledb_query_set_buffer_nullable(
+      long jarg1, long jarg2, String jarg3, long jarg4, long jarg5, long jarg6, long jarg7);
+
+  public static final native int tiledb_query_set_buffer_var_nullable(
+      long jarg1,
+      long jarg2,
+      String jarg3,
+      long jarg4,
+      long jarg5,
+      long jarg6,
+      long jarg7,
+      long jarg8,
+      long jarg9);
+
   public static final native int tiledb_query_get_buffer(
       long jarg1, long jarg2, String jarg3, long jarg4, long jarg5);
 
   public static final native int tiledb_query_get_buffer_var(
       long jarg1, long jarg2, String jarg3, long jarg4, long jarg5, long jarg6, long jarg7);
+
+  public static final native int tiledb_query_get_buffer_nullable(
+      long jarg1, long jarg2, String jarg3, long jarg4, long jarg5, long jarg6, long jarg7);
+
+  public static final native int tiledb_query_get_buffer_var_nullable(
+      long jarg1,
+      long jarg2,
+      String jarg3,
+      long jarg4,
+      long jarg5,
+      long jarg6,
+      long jarg7,
+      long jarg8,
+      long jarg9);
 
   public static final native int tiledb_query_set_layout(long jarg1, long jarg2, int jarg3);
 
