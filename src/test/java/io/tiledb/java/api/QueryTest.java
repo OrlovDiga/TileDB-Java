@@ -937,4 +937,160 @@ public class QueryTest {
       }
     }
   }
+
+  public static class NullableAttributesDenseTest {
+
+    @Rule public TemporaryFolder temp = new TemporaryFolder();
+
+    private String arrayURI;
+
+    @Before
+    public void setup() throws Exception {
+      ctx = new Context();
+      arrayURI = temp.getRoot().toPath().resolve("query").toString();
+    }
+
+    public void denseArrayCreateNullableAttrs(boolean nullable) throws Exception {
+      // The array will be 4x4 with dimensions "rows" and "cols", with domain [1,4].
+      Dimension<Integer> rows =
+          new Dimension<>(ctx, "rows", Integer.class, new Pair<Integer, Integer>(1, 4), 2);
+      Dimension<Integer> cols =
+          new Dimension<>(ctx, "cols", Integer.class, new Pair<Integer, Integer>(1, 4), 2);
+
+      // Create and set getDomain
+      Domain domain = new Domain(ctx);
+      domain.addDimension(rows);
+      domain.addDimension(cols);
+
+      // Add two attributes "a1" and "a2", so each (i,j) cell can store
+      // a character on "a1" and a vector of two floats on "a2".
+      Attribute a1 = new Attribute(ctx, "a1", Character.class);
+      Attribute a2 = new Attribute(ctx, "a2", Float.class);
+      a2.setCellValNum(1);
+
+      if (nullable) {
+        a1.setNullable((short) 1);
+        a2.setNullable((short) 1);
+      }
+
+      ArraySchema schema = new ArraySchema(ctx, TILEDB_DENSE);
+      schema.setTileOrder(TILEDB_ROW_MAJOR);
+      schema.setCellOrder(TILEDB_ROW_MAJOR);
+      schema.setDomain(domain);
+      schema.addAttribute(a1);
+      schema.addAttribute(a2);
+
+      Array.create(arrayURI, schema);
+    }
+
+    public void denseArrayWrite() throws Exception {
+      // Prepare cell buffers
+      NativeArray a1 = new NativeArray(ctx, "abcdefghijklmnop", String.class);
+      NativeArray a2 =
+          new NativeArray(
+              ctx,
+              new float[] {
+                0.1f, 0.2f, 1.1f, 1.2f, 2.1f, 2.2f, 3.1f, 3.2f,
+                4.1f, 4.2f, 5.1f, 5.2f, 6.1f, 6.2f, 7.1f, 7.2f
+              },
+              Float.class);
+
+      // Create query
+      try (Array array = new Array(ctx, arrayURI, TILEDB_WRITE);
+          Query query = new Query(array)) {
+        query.setLayout(TILEDB_ROW_MAJOR);
+        NativeArray bytemap = new NativeArray(ctx, new byte[] {1, 5, 6, 1, 1, 5, 6, 1 ,1, 5, 6, 1, 1, 5, 6, 1}, Byte.class);
+
+        query.setBufferNullable("a1", a1, 16, bytemap);
+        query.setBufferNullable("a2", a2, 16, bytemap);
+
+        // Submit query
+        query.submit();
+      }
+    }
+
+    public void sparseArrayCreateNullableAttrs(boolean nullable) throws TileDBError {
+      // The array will be 4x4 with dimensions "rows" and "cols", with domain [1,4].
+      Dimension<Integer> d1 =
+          new Dimension<Integer>(ctx, "d1", Datatype.TILEDB_STRING_ASCII, null, null);
+
+      // Create and set getDomain
+      Domain domain = new Domain(ctx);
+      domain.addDimension(d1);
+
+      // Add two attributes "a1" and "a2", so each (i,j) cell can store
+      // a character on "a1" and a vector of two floats on "a2".
+      Attribute a1 = new Attribute(ctx, "a1", Integer.class);
+      Attribute a2 = new Attribute(ctx, "a2", Datatype.TILEDB_STRING_ASCII);
+      a2.setCellVar();
+
+      if (nullable) {
+        a1.setNullable((short) 1);
+        a2.setNullable((short) 1);
+      }
+
+      ArraySchema schema = new ArraySchema(ctx, TILEDB_SPARSE);
+      schema.setTileOrder(TILEDB_ROW_MAJOR);
+      schema.setCellOrder(TILEDB_ROW_MAJOR);
+      schema.setDomain(domain);
+      schema.addAttribute(a1);
+      schema.addAttribute(a2);
+
+      Array.create(arrayURI, schema);
+    }
+
+    public void sparseArrayWrite() throws TileDBError {
+
+      NativeArray d_data = new NativeArray(ctx, "aabbccddee", Datatype.TILEDB_STRING_ASCII);
+      NativeArray d_off = new NativeArray(ctx, new long[] {0, 2, 4, 6, 8}, Datatype.TILEDB_UINT64);
+
+      // Prepare cell buffers
+      NativeArray a1 = new NativeArray(ctx, new int[] {1, 2, 3, 4, 5}, Integer.class);
+
+      NativeArray a2_data = new NativeArray(ctx, "aabbccddee", Datatype.TILEDB_STRING_ASCII);
+      NativeArray a2_off = new NativeArray(ctx, new long[] {0, 2, 4, 6, 8}, Datatype.TILEDB_UINT64);
+
+      // Create query
+      Array array = new Array(ctx, arrayURI, TILEDB_WRITE);
+      Query query = new Query(array);
+      query.setLayout(TILEDB_GLOBAL_ORDER);
+
+      NativeArray bytemap = new NativeArray(ctx, new byte[] {1, 5, 6}, Byte.class);
+
+      query.setBuffer("d1", d_off, d_data);
+      query.setBufferNullable("a1", a1, 5, bytemap);
+      query.setBufferNullable("a2", a2_off, a2_data, bytemap);
+
+      // Submit query
+      query.submit();
+
+      query.finalizeQuery();
+      query.close();
+      array.close();
+    }
+
+    @Test
+    public void testDense() throws Exception {
+      denseArrayCreateNullableAttrs(true);
+      denseArrayWrite();
+    }
+
+    @Test(expected = TileDBError.class)
+    public void testDenseErrorExpeted() throws Exception {
+      denseArrayCreateNullableAttrs(false);
+      denseArrayWrite();
+    }
+
+    @Test
+    public void testSparse() throws Exception {
+      sparseArrayCreateNullableAttrs(true);
+      sparseArrayWrite();
+    }
+
+    @Test(expected = TileDBError.class)
+    public void testSparseErrorExpected() throws Exception {
+      sparseArrayCreateNullableAttrs(false);
+      sparseArrayWrite();
+    }
+  }
 }
