@@ -999,7 +999,9 @@ public class QueryTest {
       try (Array array = new Array(ctx, arrayURI, TILEDB_WRITE);
           Query query = new Query(array)) {
         query.setLayout(TILEDB_ROW_MAJOR);
-        NativeArray bytemap = new NativeArray(ctx, new byte[] {1, 5, 6, 1, 1, 5, 6, 1 ,1, 5, 6, 1, 1, 5, 6, 1}, Byte.class);
+        NativeArray bytemap =
+            new NativeArray(
+                ctx, new byte[] {1, 5, 6, 1, 1, 5, 6, 1, 1, 5, 6, 1, 1, 5, 6, 1}, Byte.class);
 
         query.setBufferNullable("a1", a1, 16, bytemap);
         query.setBufferNullable("a2", a2, 16, bytemap);
